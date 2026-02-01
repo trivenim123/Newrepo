@@ -1,0 +1,25 @@
+steps:
+# Build Docker image
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - build
+    - '-t'
+    - 'us-central1-docker.pkg.dev/$PROJECT_ID/gke-repo/gke-demo:$SHORT_SHA'
+    - '.'
+
+# Push image
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+    - push
+    - 'us-central1-docker.pkg.dev/$PROJECT_ID/gke-repo/gke-demo:$SHORT_SHA'
+
+# Deploy to GKE
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      gcloud container clusters get-credentials gke-cicd-cluster --zone us-central1-a
+      sed -i "s|IMAGE_PLACEHOLDER|us-central1-docker.pkg.dev/$PROJECT_ID/gke-repo/gke-demo:$SHORT_SHA|g" deployment.yaml
+      kubectl apply -f deployment.yaml
+      kubectl apply -f service.yaml
